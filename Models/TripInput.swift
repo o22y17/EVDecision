@@ -1,2 +1,7 @@
 import Foundation
-struct TripInput { let batteryPercentage: Int; let destination: String; let reserveBattery: Int }
+
+struct TripInput {
+    let batteryPercentage: Int
+    let destination: SelectedPlace?
+    let reserveBattery: Int
+}

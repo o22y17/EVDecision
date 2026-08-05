@@ -15,6 +15,14 @@ struct RecommendationView: View {
                 metric("Reserve", "\(recommendation.reserveBattery)%")
                 metric("ITC", "+\(recommendation.incrementalTimeCostMinutes) min")
             }
+            if let place = recommendation.destination, GoogleMapsConfiguration.isConfigured {
+                Section("Destination") {
+                    GoogleMapView(place: place)
+                        .frame(height: 180)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    Text(place.name).font(.subheadline)
+                }
+            }
             Section("Why") { Text("Your projected arrival charge stays above the reserve. Skipping a charge saves an estimated 18 minutes.").font(.subheadline) }
         }.navigationTitle("Recommendation").navigationBarTitleDisplayMode(.inline)
     }
