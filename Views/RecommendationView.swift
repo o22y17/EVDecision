@@ -12,11 +12,11 @@ struct RecommendationView: View {
                     Text(recommendation.explanation).font(.subheadline).foregroundStyle(.secondary)
                 }.padding(.vertical, 4)
             }
-            Section("Trip impact") {
-                metric("Arrival battery", "\(recommendation.arrivalBattery)%")
-                metric("Reserve", "\(recommendation.reserveBattery)%")
-                metric("ITC", "+\(recommendation.incrementalTimeCostMinutes) min")
-                metric("Confidence", recommendation.confidence.rawValue)
+            Section("What this means") {
+                metric("Battery when you arrive", "\(recommendation.arrivalBattery)%")
+                metric("Your arrival buffer", "\(recommendation.reserveBattery)%")
+                metric("Time added by charging", "+\(recommendation.incrementalTimeCostMinutes) min")
+                metric("How sure we are", recommendation.confidence.rawValue)
             }
             if let place = recommendation.destination, GoogleMapsConfiguration.isConfigured {
                 Section("Destination") {
@@ -24,7 +24,7 @@ struct RecommendationView: View {
                     Text(place.name).font(.subheadline)
                 }
             }
-            Section("Why") { Text(recommendation.explanation).font(.subheadline) }
+            Section("Why we recommend this") { Text(recommendation.explanation).font(.subheadline) }
         }.navigationTitle("Recommendation").navigationBarTitleDisplayMode(.inline)
     }
     private func metric(_ name: String, _ value: String) -> some View {
