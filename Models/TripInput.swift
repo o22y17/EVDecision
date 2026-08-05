@@ -5,4 +5,5 @@ struct TripInput {
     let destination: SelectedPlace?
     let reserveBattery: Int
     let preferredChargeLimit: Int
+    let routeData: RouteData?
 }

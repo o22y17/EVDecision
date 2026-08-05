@@ -20,6 +20,8 @@ struct ChargingRecommendation: Identifiable, Hashable {
     let destination: SelectedPlace?
     let explanation: String
     let confidence: DecisionConfidence
+    let routeData: RouteData?
+    let usedLiveRouteData: Bool
 
     var title: String { decision.rawValue }
 }

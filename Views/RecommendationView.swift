@@ -18,6 +18,15 @@ struct RecommendationView: View {
                 metric("Time added by charging", "+\(recommendation.incrementalTimeCostMinutes) min")
                 metric("How sure we are", recommendation.confidence.rawValue)
             }
+            Section("Route") {
+                if let route = recommendation.routeData {
+                    metric("Trip distance", String(format: "%.1f km", route.distanceKilometers))
+                    metric("Estimated driving time", "\(route.durationMinutes) min")
+                    metric("Recommendation data", "Live route")
+                } else {
+                    metric("Recommendation data", "Basic estimate")
+                }
+            }
             if let place = recommendation.destination, GoogleMapsConfiguration.isConfigured {
                 Section("Destination") {
                     GoogleMapView(place: place).frame(height: 180).clipShape(RoundedRectangle(cornerRadius: 10))

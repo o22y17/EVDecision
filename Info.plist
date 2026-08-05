@@ -11,6 +11,7 @@
     <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
     <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
     <key>GoogleMapsAPIKey</key><string>$(GOOGLE_MAPS_API_KEY)</string>
+    <key>NSLocationWhenInUseUsageDescription</key><string>EV Decision uses your current location once to estimate the route to your selected destination.</string>
     <key>UILaunchScreen</key><dict/>
 </dict>
 </plist>

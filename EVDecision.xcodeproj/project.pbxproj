@@ -18,6 +18,10 @@
 		A1000000000000000000000B = {isa = PBXBuildFile; fileRef = A2000000000000000000000B; };
 		A1000000000000000000000C = {isa = PBXBuildFile; fileRef = A2000000000000000000000C; };
 		A1000000000000000000000D = {isa = PBXBuildFile; fileRef = A2000000000000000000000D; };
+		A10000000000000000000010 = {isa = PBXBuildFile; fileRef = A20000000000000000000012; };
+		A10000000000000000000011 = {isa = PBXBuildFile; fileRef = A20000000000000000000013; };
+		A10000000000000000000012 = {isa = PBXBuildFile; fileRef = A20000000000000000000014; };
+		A10000000000000000000020 = {isa = PBXBuildFile; fileRef = A20000000000000000000020; };
 		A1000000000000000000000E = {isa = PBXBuildFile; productRef = A90000000000000000000001; };
 		A1000000000000000000000F = {isa = PBXBuildFile; productRef = A90000000000000000000002; };
 
@@ -38,21 +42,31 @@
 		A2000000000000000000000F = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = GoogleMaps.xcconfig; sourceTree = "<group>"; };
 		A20000000000000000000010 = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = GoogleMaps.local.xcconfig.example; sourceTree = "<group>"; };
 		A20000000000000000000011 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EVDecision.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteData.swift; sourceTree = "<group>"; };
+		A20000000000000000000013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
+		A20000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteService.swift; sourceTree = "<group>"; };
+		A20000000000000000000020 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecisionEngineTests.swift; sourceTree = "<group>"; };
+		A20000000000000000000021 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EVDecisionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 
-		A30000000000000000000001 = {isa = PBXGroup; children = (A20000000000000000000001,A20000000000000000000002,A30000000000000000000002,A30000000000000000000003,A30000000000000000000004,A30000000000000000000005,A2000000000000000000000E,A30000000000000000000006); sourceTree = "<group>"; };
+		A30000000000000000000001 = {isa = PBXGroup; children = (A20000000000000000000001,A20000000000000000000002,A30000000000000000000002,A30000000000000000000003,A30000000000000000000004,A30000000000000000000005,A2000000000000000000000E,A30000000000000000000006,A30000000000000000000007); sourceTree = "<group>"; };
 		A30000000000000000000002 = {isa = PBXGroup; children = (A20000000000000000000003,A20000000000000000000004,A20000000000000000000005,A20000000000000000000006,A20000000000000000000007,A20000000000000000000008); path = Views; sourceTree = "<group>"; };
-		A30000000000000000000003 = {isa = PBXGroup; children = (A20000000000000000000009,A2000000000000000000000A,A2000000000000000000000B); path = Models; sourceTree = "<group>"; };
-		A30000000000000000000004 = {isa = PBXGroup; children = (A2000000000000000000000C,A2000000000000000000000D); path = Services; sourceTree = "<group>"; };
+		A30000000000000000000003 = {isa = PBXGroup; children = (A20000000000000000000009,A2000000000000000000000A,A2000000000000000000000B,A20000000000000000000012); path = Models; sourceTree = "<group>"; };
+		A30000000000000000000004 = {isa = PBXGroup; children = (A2000000000000000000000C,A2000000000000000000000D,A20000000000000000000013,A20000000000000000000014); path = Services; sourceTree = "<group>"; };
 		A30000000000000000000005 = {isa = PBXGroup; children = (A2000000000000000000000F,A20000000000000000000010); path = Config; sourceTree = "<group>"; };
-		A30000000000000000000006 = {isa = PBXGroup; children = (A20000000000000000000011); name = Products; sourceTree = "<group>"; };
+		A30000000000000000000006 = {isa = PBXGroup; children = (A20000000000000000000011,A20000000000000000000021); name = Products; sourceTree = "<group>"; };
+		A30000000000000000000007 = {isa = PBXGroup; children = (A20000000000000000000020); path = Tests; sourceTree = "<group>"; };
 
-		A40000000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001,A10000000000000000000002,A10000000000000000000003,A10000000000000000000004,A10000000000000000000005,A10000000000000000000006,A10000000000000000000007,A10000000000000000000008,A10000000000000000000009,A1000000000000000000000A,A1000000000000000000000B,A1000000000000000000000C,A1000000000000000000000D); runOnlyForDeploymentPostprocessing = 0; };
+		A40000000000000000000001 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000001,A10000000000000000000002,A10000000000000000000003,A10000000000000000000004,A10000000000000000000005,A10000000000000000000006,A10000000000000000000007,A10000000000000000000008,A10000000000000000000009,A1000000000000000000000A,A1000000000000000000000B,A1000000000000000000000C,A1000000000000000000000D,A10000000000000000000010,A10000000000000000000011,A10000000000000000000012); runOnlyForDeploymentPostprocessing = 0; };
 		A40000000000000000000002 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (A1000000000000000000000E,A1000000000000000000000F); runOnlyForDeploymentPostprocessing = 0; };
 		A40000000000000000000003 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+		A40000000000000000000004 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000020); runOnlyForDeploymentPostprocessing = 0; };
+		A40000000000000000000005 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 
 		A50000000000000000000001 = {isa = PBXNativeTarget; buildConfigurationList = A60000000000000000000001; buildPhases = (A40000000000000000000001,A40000000000000000000002,A40000000000000000000003); buildRules = (); dependencies = (); name = EVDecision; packageProductDependencies = (A90000000000000000000001,A90000000000000000000002); productName = EVDecision; productReference = A20000000000000000000011; productType = "com.apple.product-type.application"; };
+		A50000000000000000000002 = {isa = PBXNativeTarget; buildConfigurationList = A60000000000000000000009; buildPhases = (A40000000000000000000004,A40000000000000000000005); buildRules = (); dependencies = (A51000000000000000000001); name = EVDecisionTests; productName = EVDecisionTests; productReference = A20000000000000000000021; productType = "com.apple.product-type.bundle.unit-test"; };
+		A51000000000000000000001 = {isa = PBXTargetDependency; target = A50000000000000000000001; };
 
-		A70000000000000000000001 = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastUpgradeCheck = 2660; TargetAttributes = {A50000000000000000000001 = {CreatedOnToolsVersion = 26.6;};};}; buildConfigurationList = A60000000000000000000002; compatibilityVersion = "Xcode 16.0"; developmentRegion = en; knownRegions = (en,Base); mainGroup = A30000000000000000000001; packageReferences = (A80000000000000000000001,A80000000000000000000002); productRefGroup = A30000000000000000000006; projectDirPath = ""; projectRoot = ""; targets = (A50000000000000000000001); };
+		A70000000000000000000001 = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastUpgradeCheck = 2660; TargetAttributes = {A50000000000000000000001 = {CreatedOnToolsVersion = 26.6;};};}; buildConfigurationList = A60000000000000000000002; compatibilityVersion = "Xcode 16.0"; developmentRegion = en; knownRegions = (en,Base); mainGroup = A30000000000000000000001; packageReferences = (A80000000000000000000001,A80000000000000000000002); productRefGroup = A30000000000000000000006; projectDirPath = ""; projectRoot = ""; targets = (A50000000000000000000001,A50000000000000000000002); };
 
 		A80000000000000000000001 = {isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/googlemaps/ios-maps-sdk"; requirement = {kind = upToNextMajorVersion; minimumVersion = 10.0.0;}; };
 		A80000000000000000000002 = {isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/googlemaps/ios-places-sdk"; requirement = {kind = upToNextMajorVersion; minimumVersion = 10.0.0;}; };
@@ -61,10 +75,13 @@
 
 		A60000000000000000000003 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)"; SWIFT_OPTIMIZATION_LEVEL = "-Onone";}; name = Debug; };
 		A60000000000000000000004 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; SWIFT_OPTIMIZATION_LEVEL = "-O";}; name = Release; };
-		A60000000000000000000005 = {isa = XCBuildConfiguration; baseConfigurationReference = A2000000000000000000000F; buildSettings = {CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.ozdensayin.evdecisionapp; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphonesimulator iphoneos"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1;}; name = Debug; };
+		A60000000000000000000005 = {isa = XCBuildConfiguration; baseConfigurationReference = A2000000000000000000000F; buildSettings = {ENABLE_TESTABILITY = YES; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.ozdensayin.evdecisionapp; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphonesimulator iphoneos"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1;}; name = Debug; };
 		A60000000000000000000006 = {isa = XCBuildConfiguration; baseConfigurationReference = A2000000000000000000000F; buildSettings = {CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = Info.plist; IPHONEOS_DEPLOYMENT_TARGET = 17.0; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.ozdensayin.evdecisionapp; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphonesimulator iphoneos"; SWIFT_VERSION = 6.0; TARGETED_DEVICE_FAMILY = 1;}; name = Release; };
+		A60000000000000000000007 = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; PRODUCT_BUNDLE_IDENTIFIER = com.ozdensayin.evdecisionapp.tests; PRODUCT_NAME = EVDecisionTests; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_VERSION = 6.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EVDecision.app/EVDecision"; TEST_TARGET_NAME = EVDecision;}; name = Debug; };
+		A60000000000000000000008 = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; CODE_SIGN_STYLE = Automatic; PRODUCT_BUNDLE_IDENTIFIER = com.ozdensayin.evdecisionapp.tests; PRODUCT_NAME = EVDecisionTests; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_VERSION = 6.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EVDecision.app/EVDecision"; TEST_TARGET_NAME = EVDecision;}; name = Release; };
 		A60000000000000000000001 = {isa = XCConfigurationList; buildConfigurations = (A60000000000000000000005,A60000000000000000000006); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 		A60000000000000000000002 = {isa = XCConfigurationList; buildConfigurations = (A60000000000000000000003,A60000000000000000000004); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		A60000000000000000000009 = {isa = XCConfigurationList; buildConfigurations = (A60000000000000000000007,A60000000000000000000008); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
 	};
 	rootObject = A70000000000000000000001;
 }

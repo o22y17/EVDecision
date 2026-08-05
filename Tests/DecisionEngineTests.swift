@@ -18,8 +18,7 @@ final class DecisionEngineTests: XCTestCase {
     }
 
     func testPredictedArrivalClampsAtZero() {
-        let input = trip(battery: 20, destination: place(latitude: 1, longitude: 2.02))
-        XCTAssertEqual(engine.predictedArrivalBattery(for: input), 0)
+        XCTAssertEqual(engine.predictedArrivalBattery(for: trip(battery: 20, destination: place(latitude: 1, longitude: 2.02))), 0)
     }
 
     func testConfidenceThresholds() {
@@ -29,19 +28,15 @@ final class DecisionEngineTests: XCTestCase {
     }
 
     func testDecisionUsesConservativeEqualityAtReservePlusBuffer() {
-        let input = trip(battery: 38, destination: place(latitude: 1, longitude: 2))
-        let result = engine.recommendation(for: input)
+        let result = engine.recommendation(for: trip(battery: 38, destination: place(latitude: 1, longitude: 2)))
         XCTAssertEqual(result.arrivalBattery, 20)
         XCTAssertEqual(result.decision, .chargeNow)
     }
 
     func testPreferredChargeLimitOnlyChangesITC() {
         let destination = place(latitude: 1, longitude: 2)
-        let lowerLimit = trip(battery: 60, destination: destination, preferredLimit: 70)
-        let higherLimit = trip(battery: 60, destination: destination, preferredLimit: 90)
-        let lowerResult = engine.recommendation(for: lowerLimit)
-        let higherResult = engine.recommendation(for: higherLimit)
-
+        let lowerResult = engine.recommendation(for: trip(battery: 60, destination: destination, preferredLimit: 70))
+        let higherResult = engine.recommendation(for: trip(battery: 60, destination: destination, preferredLimit: 90))
         XCTAssertEqual(lowerResult.arrivalBattery, higherResult.arrivalBattery)
         XCTAssertEqual(lowerResult.decision, higherResult.decision)
         XCTAssertEqual(lowerResult.incrementalTimeCostMinutes, 8)
@@ -52,21 +47,34 @@ final class DecisionEngineTests: XCTestCase {
         XCTAssertEqual(engine.incrementalTimeCost(for: trip(battery: 85, preferredLimit: 80)), 8)
     }
 
-    func testChargeNowExplanationIncludesReserveAndLimit() {
-        let result = engine.recommendation(for: trip(battery: 50, destination: place(latitude: 1, longitude: 2.01)))
-        XCTAssertEqual(result.decision, .chargeNow)
-        XCTAssertTrue(result.explanation.contains("20%"))
-        XCTAssertTrue(result.explanation.contains("80%"))
+    func testLiveRouteDataDrivesConsumptionAndRecommendationMetadata() {
+        let route = RouteData(distanceKilometers: 100, durationMinutes: 90, providerName: "Google Routes", timestamp: Date())
+        let result = engine.recommendation(for: trip(battery: 50, destination: place(latitude: 1, longitude: 2), routeData: route))
+        XCTAssertEqual(result.arrivalBattery, 32)
+        XCTAssertTrue(result.usedLiveRouteData)
+        XCTAssertEqual(result.routeData, route)
     }
 
-    func testDontChargeExplanationIncludesTimeCost() {
-        let result = engine.recommendation(for: trip(battery: 70, destination: place(latitude: 1, longitude: 2)))
-        XCTAssertEqual(result.decision, .dontCharge)
-        XCTAssertTrue(result.explanation.contains("minutes"))
+    func testRouteServiceFailureFallsBackToExistingEstimate() {
+        let result = engine.recommendation(for: trip(battery: 70, destination: place(latitude: 1, longitude: 2), routeData: nil))
+        XCTAssertEqual(result.arrivalBattery, 52)
+        XCTAssertFalse(result.usedLiveRouteData)
+        XCTAssertTrue(result.explanation.contains("basic estimate"))
     }
 
-    private func trip(battery: Int, destination: SelectedPlace? = nil, reserve: Int = 20, preferredLimit: Int = 80) -> TripInput {
-        TripInput(batteryPercentage: battery, destination: destination, reserveBattery: reserve, preferredChargeLimit: preferredLimit)
+    func testFallbackLowersConfidence() {
+        XCTAssertEqual(engine.confidence(for: 40, reserveBattery: 20, usesLiveRouteData: true), .high)
+        XCTAssertEqual(engine.confidence(for: 40, reserveBattery: 20, usesLiveRouteData: false), .medium)
+        XCTAssertEqual(engine.confidence(for: 25, reserveBattery: 20, usesLiveRouteData: false), .low)
+    }
+
+    func testLocationUnavailableHasHumanReadableFallbackMessage() {
+        XCTAssertTrue((LocationServiceFailure.unavailable.errorDescription ?? "").contains("basic estimate"))
+        XCTAssertTrue((LocationServiceFailure.permissionDenied.errorDescription ?? "").contains("Location access"))
+    }
+
+    private func trip(battery: Int, destination: SelectedPlace? = nil, reserve: Int = 20, preferredLimit: Int = 80, routeData: RouteData? = nil) -> TripInput {
+        TripInput(batteryPercentage: battery, destination: destination, reserveBattery: reserve, preferredChargeLimit: preferredLimit, routeData: routeData)
     }
 
     private func place(latitude: Double, longitude: Double) -> SelectedPlace {
