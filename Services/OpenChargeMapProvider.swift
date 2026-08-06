@@ -27,8 +27,14 @@ struct OpenChargeMapProvider: ChargingDataProvider {
     }
 
     @MainActor func searchStations(in corridor: RouteCorridor) async -> ChargingProviderResult {
-        let center = corridor.samplePoints.first ?? corridor.origin
-        return await searchStations(near: center.latitude, longitude: center.longitude, radiusKilometers: corridor.radiusKilometers)
+        var stations: [ChargingStation] = []
+        var failures: [String] = []
+        for point in corridor.samplePoints {
+            let result = await searchStations(near: point.latitude, longitude: point.longitude, radiusKilometers: corridor.radiusKilometers)
+            stations.append(contentsOf: result.stations)
+            if let error = result.errorDescription { failures.append(error) }
+        }
+        return ChargingProviderResult(stations: stations, source: source, timestamp: Date(), errorDescription: failures.first)
     }
 
     private func request(_ url: URL) async -> ChargingProviderResult {
