@@ -62,9 +62,10 @@ Confidence is based on `predictedArrival - reserve`:
 
 ## Journey mode rules
 
-- Journey remains a planning placeholder in v1 and does not call the decision engine.
-- V1 does not infer charging stops, route legs, or a journey recommendation.
-- A future Journey engine may reuse the same reserve, confidence, explanation, and ITC contracts per route leg.
+- Journey v1 checks whether the current battery can cover one selected long-trip destination while preserving the configured arrival reserve.
+- Journey v1 reuses the Daily decision engine and attempts to use live route distance before falling back to the same conservative prototype estimate.
+- Journey results show the next stop, route distance, driving duration, estimated arrival time, provider, and route timestamp when live route data is available.
+- Journey v1 does not infer charging stops or route legs. Route-aware stop planning remains a future Journey-engine capability.
 
 ## Future ITC integration points
 

@@ -14,6 +14,8 @@ struct HomeView: View {
 
     private let engine = DecisionEngineV1()
     private let routeService = GoogleRoutesService()
+    private let chargingDataService = ChargingDataService(providers: [OpenChargeMapProvider()])
+    private let tripPlanner = RoadTripPlanner()
 
     var body: some View {
         ScrollView {
@@ -37,8 +39,7 @@ struct HomeView: View {
                                 Spacer()
                                 Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                             }.frame(maxWidth: .infinity, alignment: .leading).padding(10).background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8))
-                        }.disabled(!GoogleMapsConfiguration.isConfigured)
-                        if !GoogleMapsConfiguration.isConfigured { Text("Finish Google Maps setup to search for places.").font(.footnote).foregroundStyle(.secondary) }
+                        }
                         if selectedPlace != nil { Label("Destination selected", systemImage: "checkmark.circle.fill").font(.footnote).foregroundStyle(.green) }
                         Text("Keep at least \(reserveBattery)% when you arrive.").font(.footnote).foregroundStyle(.secondary)
                     }.padding(.vertical, 2)
@@ -68,8 +69,10 @@ struct HomeView: View {
         isPreparingRecommendation = true
         routeMessage = nil
         var routeData: RouteData?
+        var originPoint: RoutePoint?
         do {
             let origin = try await locationService.currentCoordinate()
+            originPoint = RoutePoint(latitude: origin.latitude, longitude: origin.longitude)
             let destination = CLLocationCoordinate2D(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude)
             switch await routeService.route(from: origin, to: destination) {
             case .success(let data): routeData = data
@@ -78,7 +81,15 @@ struct HomeView: View {
         } catch {
             routeMessage = error.localizedDescription
         }
-        recommendation = engine.recommendation(for: TripInput(batteryPercentage: Int(batteryPercentage), destination: selectedPlace, reserveBattery: reserveBattery, preferredChargeLimit: preferredChargeLimit, routeData: routeData))
+        let base = engine.recommendation(for: TripInput(batteryPercentage: Int(batteryPercentage), destination: selectedPlace, reserveBattery: reserveBattery, preferredChargeLimit: preferredChargeLimit, routeData: routeData))
+        var stop: ChargingStopPlan?
+        if base.decision == .chargeNow, let routeData, let originPoint {
+            let corridor = RouteCorridor(origin: originPoint, destination: RoutePoint(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude), polyline: nil, radiusKilometers: 12)
+            let snapshot = await chargingDataService.stations(in: corridor)
+            stop = tripPlanner.bestStop(stations: snapshot.stations, route: routeData, battery: Int(batteryPercentage), reserve: reserveBattery, preferredLimit: preferredChargeLimit, origin: originPoint, destination: RoutePoint(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude))
+            if stop == nil { routeMessage = snapshot.partialFailures.first ?? "No suitable fast charger was found close enough to this route." }
+        }
+        recommendation = ChargingRecommendation(decision: base.decision, arrivalBattery: base.arrivalBattery, reserveBattery: base.reserveBattery, incrementalTimeCostMinutes: base.incrementalTimeCostMinutes, destination: base.destination, explanation: base.explanation, confidence: base.confidence, routeData: base.routeData, usedLiveRouteData: base.usedLiveRouteData, chargingStop: stop)
         isPreparingRecommendation = false
     }
 }

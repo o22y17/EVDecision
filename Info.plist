@@ -10,8 +10,8 @@
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
     <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
-    <key>GoogleMapsAPIKey</key><string>20 20 12 61 79 80 81 98 33 100 204 250 395 398 399 400 701GOOGLE_MAPS_API_KEY)</string>
-    <key>OpenChargeMapAPIKey</key><string>20 20 12 61 79 80 81 98 33 100 204 250 395 398 399 400 701OPEN_CHARGE_MAP_API_KEY)</string>
+    <key>GoogleMapsAPIKey</key><string>$(GOOGLE_MAPS_API_KEY)</string>
+    <key>OpenChargeMapAPIKey</key><string>$(OPEN_CHARGE_MAP_API_KEY)</string>
     <key>NSLocationWhenInUseUsageDescription</key><string>EV Decision uses your current location once to estimate the route to your selected destination.</string>
     <key>UILaunchScreen</key><dict/>
 </dict>

@@ -15,7 +15,9 @@ struct GoogleRoutesService: RouteService {
     }
 
     func route(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) async -> RouteLookupResult {
-        guard let apiKey, !apiKey.isEmpty, !apiKey.contains("$(") else { return .failure(.apiKeyUnavailable) }
+        guard let apiKey,
+              apiKey.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("AIza"),
+              !apiKey.contains("$(") else { return .failure(.apiKeyUnavailable) }
         guard let url = URL(string: "https://routes.googleapis.com/directions/v2:computeRoutes") else { return .failure(.invalidResponse) }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

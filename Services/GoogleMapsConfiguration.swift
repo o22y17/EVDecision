@@ -8,7 +8,11 @@ enum GoogleMapsConfiguration {
         guard let key = Bundle.main.object(forInfoDictionaryKey: "GoogleMapsAPIKey") as? String else {
             return false
         }
-        return !key.isEmpty && !key.contains("$(") && !key.contains("REPLACE_WITH")
+        let trimmedKey = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedKey.hasPrefix("AIza")
+            && trimmedKey.count >= 35
+            && !trimmedKey.contains("$(")
+            && !trimmedKey.contains("REPLACE_WITH")
     }
 
     static func configure() {

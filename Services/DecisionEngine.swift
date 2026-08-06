@@ -20,7 +20,7 @@ struct DecisionEngineV1: DecisionEngine {
         let confidence = confidence(for: predictedArrival, reserveBattery: trip.reserveBattery, usesLiveRouteData: trip.routeData != nil)
         let decision: ChargeDecision = predictedArrival <= trip.reserveBattery + confidenceBuffer(for: confidence) ? .chargeNow : .dontCharge
         let itc = incrementalTimeCost(for: trip)
-        return ChargingRecommendation(decision: decision, arrivalBattery: predictedArrival, reserveBattery: trip.reserveBattery, incrementalTimeCostMinutes: itc, destination: trip.destination, explanation: explanation(decision: decision, predictedArrival: predictedArrival, reserveBattery: trip.reserveBattery, preferredChargeLimit: trip.preferredChargeLimit, itc: itc, usingLiveRoute: trip.routeData != nil), confidence: confidence, routeData: trip.routeData, usedLiveRouteData: trip.routeData != nil)
+        return ChargingRecommendation(decision: decision, arrivalBattery: predictedArrival, reserveBattery: trip.reserveBattery, incrementalTimeCostMinutes: itc, destination: trip.destination, explanation: explanation(decision: decision, predictedArrival: predictedArrival, reserveBattery: trip.reserveBattery, preferredChargeLimit: trip.preferredChargeLimit, itc: itc, usingLiveRoute: trip.routeData != nil), confidence: confidence, routeData: trip.routeData, usedLiveRouteData: trip.routeData != nil, chargingStop: nil)
     }
 
     func predictedArrivalBattery(for trip: TripInput) -> Int {
@@ -73,9 +73,10 @@ struct DecisionEngineV1: DecisionEngine {
 
     private func explanation(decision: ChargeDecision, predictedArrival: Int, reserveBattery: Int, preferredChargeLimit: Int, itc: Int, usingLiveRoute: Bool) -> String {
         let routeNote = usingLiveRoute ? " This uses your live route." : " This is a basic estimate because your live route was unavailable."
+        let buffer = confidenceBuffer(for: confidence(for: predictedArrival, reserveBattery: reserveBattery, usesLiveRouteData: usingLiveRoute))
         switch decision {
         case .chargeNow:
-            return "Predicted arrival is \(predictedArrival)%, at or below your \(reserveBattery)% reserve buffer. Charging toward \(preferredChargeLimit)% protects your arrival margin.\(routeNote)"
+            return "Predicted arrival is \(predictedArrival)%. The decision protects your \(reserveBattery)% reserve plus a \(buffer)-point confidence buffer. Charging toward \(preferredChargeLimit)% protects your arrival margin.\(routeNote)"
         case .dontCharge:
             return "Predicted arrival is \(predictedArrival)%, preserving your \(reserveBattery)% reserve. Charging now would add about \(itc) minutes.\(routeNote)"
         }
