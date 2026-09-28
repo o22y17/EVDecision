@@ -4,7 +4,7 @@ import SwiftUI
 struct ChargingDiagnosticsView: View {
     @State private var snapshot: ChargingDataSnapshot?
     @State private var isLoading = false
-    private let service = ChargingDataService(providers: [OpenChargeMapProvider()])
+    private let service = ChargingDataService(providers: [EPDKChargingProvider(), OpenChargeMapProvider()])
 
     var body: some View {
         List {
@@ -16,7 +16,8 @@ struct ChargingDiagnosticsView: View {
                 Section("Summary") {
                     row("Stations fetched", "\(snapshot.stations.count)")
                     row("Sources", snapshot.sources.map(\.rawValue).joined(separator: ", "))
-                    row("Last updated", snapshot.timestamp.formatted(date: .abbreviated, time: .shortened))
+                    row("Checked on device", snapshot.timestamp.formatted(date: .abbreviated, time: .shortened))
+                    ForEach(snapshot.partialFailures, id: \.self) { Text($0).font(.footnote) }
                 }
                 Section("Normalized stations") {
                     ForEach(snapshot.stations) { station in

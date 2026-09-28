@@ -12,6 +12,7 @@
     <key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
     <key>GoogleMapsAPIKey</key><string>$(GOOGLE_MAPS_API_KEY)</string>
     <key>OpenChargeMapAPIKey</key><string>$(OPEN_CHARGE_MAP_API_KEY)</string>
+    <key>EPDKStationProxyURL</key><string>$(EPDK_STATION_PROXY_URL)</string>
     <key>NSLocationWhenInUseUsageDescription</key><string>EV Decision uses your current location once to estimate the route to your selected destination.</string>
     <key>UILaunchScreen</key><dict/>
 </dict>

@@ -24,6 +24,9 @@ struct GoogleRoutesService: RouteService {
         request.timeoutInterval = 12
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "X-Goog-Api-Key")
+        if let bundleIdentifier = Bundle.main.bundleIdentifier {
+            request.setValue(bundleIdentifier, forHTTPHeaderField: "X-Ios-Bundle-Identifier")
+        }
         request.setValue("routes.duration,routes.distanceMeters", forHTTPHeaderField: "X-Goog-FieldMask")
         request.httpBody = try? JSONSerialization.data(withJSONObject: [
             "origin": waypoint(origin),
@@ -37,7 +40,14 @@ struct GoogleRoutesService: RouteService {
         do {
             let (data, response) = try await session.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse else { return .failure(.invalidResponse) }
-            guard httpResponse.statusCode == 200 else { return .failure(httpResponse.statusCode == 404 ? .noRouteFound : .networkUnavailable) }
+            guard httpResponse.statusCode == 200 else {
+                switch httpResponse.statusCode {
+                case 401, 403: return .failure(.accessDenied)
+                case 404: return .failure(.noRouteFound)
+                case 429: return .failure(.quotaExceeded)
+                default: return .failure(.networkUnavailable)
+                }
+            }
             return decode(data)
         } catch let error as URLError where error.code == .timedOut {
             return .failure(.timedOut)

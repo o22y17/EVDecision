@@ -38,7 +38,14 @@ struct ChargingDataService {
     }
 
     func snapshot(from results: [ChargingProviderResult], corridor: RouteCorridor? = nil, vehicleConnectors: Set<String> = []) -> ChargingDataSnapshot {
-        let merged = merge(results.flatMap(\.stations))
+        let minimumPower = UserDefaults.standard.object(forKey: "minimumChargingPowerKW") as? Int ?? 50
+        let candidates = results.flatMap(\.stations).map { station in
+            ChargingStation(id: station.id, name: station.name, operatorName: station.operatorName,
+                            latitude: station.latitude, longitude: station.longitude, lastUpdated: station.lastUpdated,
+                            source: station.source, dataConfidence: station.dataConfidence,
+                            units: station.units.filter { ($0.maximumPowerKW ?? 0) >= Double(minimumPower) && isUsefulDC($0, vehicleConnectors: vehicleConnectors) }, retrievedAt: station.retrievedAt, catalogueFetchedAt: station.catalogueFetchedAt)
+        }
+        let merged = merge(candidates)
         let filtered = merged.filter { station in
             (corridor == nil || isInside(station, corridor: corridor!)) && station.units.contains { isUsefulDC($0, vehicleConnectors: vehicleConnectors) }
         }
@@ -53,7 +60,7 @@ struct ChargingDataService {
             let units = unitMap.values.map { entries in entries.max { confidence(for: $0) < confidence(for: $1) }! }.sorted { $0.id < $1.id }
             let hasConflictingSources = Set(group.map(\.source)).count > 1
             let stationConfidence: ChargingDataConfidence = hasConflictingSources ? .low : confidence(for: base, units: units)
-            return ChargingStation(id: base.id, name: base.name, operatorName: base.operatorName, latitude: base.latitude, longitude: base.longitude, lastUpdated: group.compactMap(\.lastUpdated).max(), source: base.source, dataConfidence: stationConfidence, units: units)
+            return ChargingStation(id: base.id, name: base.name, operatorName: base.operatorName, latitude: base.latitude, longitude: base.longitude, lastUpdated: base.lastUpdated, source: base.source, dataConfidence: stationConfidence, units: units, retrievedAt: base.retrievedAt, catalogueFetchedAt: base.catalogueFetchedAt)
         }.sorted { $0.name < $1.name }
     }
 
@@ -61,7 +68,7 @@ struct ChargingDataService {
         let units = units ?? station.units
         let complete = !units.isEmpty && units.allSatisfy { $0.connectorType != nil && $0.maximumPowerKW != nil }
         let fresh = station.lastUpdated.map { Date().timeIntervalSince($0) < 7 * 86_400 } ?? false
-        if station.source == .operatorAPI && fresh && complete { return .high }
+        if (station.source == .operatorAPI || station.source == .epdkPublic) && fresh && complete { return .high }
         if fresh && complete { return .medium }
         return .low
     }

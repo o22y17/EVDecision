@@ -23,6 +23,7 @@ struct ChargingRecommendation: Identifiable, Hashable {
     let routeData: RouteData?
     let usedLiveRouteData: Bool
     let chargingStop: ChargingStopPlan?
+    let routeIssue: String?
 
     var title: String { decision.rawValue }
 }

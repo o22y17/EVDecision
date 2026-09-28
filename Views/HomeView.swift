@@ -1,4 +1,5 @@
 import CoreLocation
+import MapKit
 import SwiftUI
 
 struct HomeView: View {
@@ -6,15 +7,19 @@ struct HomeView: View {
     @AppStorage("preferredFastChargeLimit") private var preferredChargeLimit = 80
     @State private var batteryPercentage = 62.0
     @State private var selectedPlace: SelectedPlace?
+    @State private var destinationQuery = ""
+    @State private var destinationResults: [MKMapItem] = []
+    @State private var isSearchingDestinations = false
+    @State private var destinationSearchTask: Task<Void, Never>?
+    @FocusState private var destinationIsFocused: Bool
     @State private var recommendation: ChargingRecommendation?
-    @State private var showsAutocomplete = false
     @State private var isPreparingRecommendation = false
     @State private var routeMessage: String?
     @StateObject private var locationService = LocationService()
 
     private let engine = DecisionEngineV1()
     private let routeService = GoogleRoutesService()
-    private let chargingDataService = ChargingDataService(providers: [OpenChargeMapProvider()])
+    private let chargingDataService = ChargingDataService(providers: [EPDKChargingProvider()])
     private let tripPlanner = RoadTripPlanner()
 
     var body: some View {
@@ -32,13 +37,35 @@ struct HomeView: View {
                 }
                 GroupBox("Your trip") {
                     VStack(alignment: .leading, spacing: 10) {
-                        Button { showsAutocomplete = true } label: {
-                            HStack(spacing: 10) {
-                                Image(systemName: "magnifyingglass")
-                                Text(selectedPlace?.name ?? "Where are you going?").foregroundStyle(selectedPlace == nil ? .secondary : .primary).lineLimit(2)
-                                Spacer()
-                                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-                            }.frame(maxWidth: .infinity, alignment: .leading).padding(10).background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8))
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass").foregroundStyle(.green)
+                            TextField("Where are you going?", text: $destinationQuery)
+                                .textInputAutocapitalization(.words)
+                                .autocorrectionDisabled()
+                                .focused($destinationIsFocused)
+                                .onChange(of: destinationQuery) { _, newValue in scheduleDestinationSearch(for: newValue) }
+                            if isSearchingDestinations { ProgressView().controlSize(.small) }
+                        }
+                        .padding(10)
+                        .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8))
+
+                        if !destinationResults.isEmpty {
+                            VStack(spacing: 0) {
+                                ForEach(Array(destinationResults.prefix(5)), id: \.self) { item in
+                                    Button { selectDestination(item) } label: {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text(item.name ?? "Selected place").foregroundStyle(.primary)
+                                            if let address = item.placemark.title {
+                                                Text(address).font(.footnote).foregroundStyle(.secondary).lineLimit(1)
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 9)
+                                    }
+                                    .buttonStyle(.plain)
+                                    if item != destinationResults.prefix(5).last { Divider() }
+                                }
+                            }
                         }
                         if selectedPlace != nil { Label("Destination selected", systemImage: "checkmark.circle.fill").font(.footnote).foregroundStyle(.green) }
                         Text("Keep at least \(reserveBattery)% when you arrive.").font(.footnote).foregroundStyle(.secondary)
@@ -57,7 +84,43 @@ struct HomeView: View {
         }
         .navigationTitle("EV Decision").navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $recommendation) { RecommendationView(recommendation: $0) }
-        .sheet(isPresented: $showsAutocomplete) { GooglePlaceAutocompleteView(isPresented: $showsAutocomplete) { selectedPlace = $0 } }
+        .onDisappear { destinationSearchTask?.cancel() }
+    }
+
+    private func scheduleDestinationSearch(for text: String) {
+        destinationSearchTask?.cancel()
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if selectedPlace?.name != trimmedText { selectedPlace = nil }
+        guard trimmedText.count >= 2 else {
+            destinationResults = []
+            isSearchingDestinations = false
+            return
+        }
+        destinationSearchTask = Task {
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            isSearchingDestinations = true
+            let request = MKLocalSearch.Request()
+            request.naturalLanguageQuery = trimmedText
+            do {
+                let response = try await MKLocalSearch(request: request).start()
+                guard !Task.isCancelled else { return }
+                destinationResults = response.mapItems
+            } catch {
+                guard !Task.isCancelled else { return }
+                destinationResults = []
+            }
+            isSearchingDestinations = false
+        }
+    }
+
+    private func selectDestination(_ item: MKMapItem) {
+        let place = SelectedPlace(name: item.name ?? item.placemark.title ?? "Selected place", latitude: item.placemark.coordinate.latitude, longitude: item.placemark.coordinate.longitude)
+        selectedPlace = place
+        destinationQuery = place.name
+        destinationResults = []
+        destinationSearchTask?.cancel()
+        destinationIsFocused = false
     }
 
     @MainActor
@@ -86,10 +149,13 @@ struct HomeView: View {
         if base.decision == .chargeNow, let routeData, let originPoint {
             let corridor = RouteCorridor(origin: originPoint, destination: RoutePoint(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude), polyline: nil, radiusKilometers: 12)
             let snapshot = await chargingDataService.stations(in: corridor)
+            routeMessage = snapshot.partialFailures.isEmpty ? routeMessage : snapshot.partialFailures.joined(separator: "\n")
             stop = tripPlanner.bestStop(stations: snapshot.stations, route: routeData, battery: Int(batteryPercentage), reserve: reserveBattery, preferredLimit: preferredChargeLimit, origin: originPoint, destination: RoutePoint(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude))
-            if stop == nil { routeMessage = snapshot.partialFailures.first ?? "No suitable fast charger was found close enough to this route." }
+            if stop == nil {
+                routeMessage = snapshot.partialFailures.first ?? (tripPlanner.hasReliableCandidate(in: snapshot.stations) ? "No suitable fast charger was found close enough to this route." : "We found charging locations, but their operator or update information is too old to recommend safely.")
+            }
         }
-        recommendation = ChargingRecommendation(decision: base.decision, arrivalBattery: base.arrivalBattery, reserveBattery: base.reserveBattery, incrementalTimeCostMinutes: base.incrementalTimeCostMinutes, destination: base.destination, explanation: base.explanation, confidence: base.confidence, routeData: base.routeData, usedLiveRouteData: base.usedLiveRouteData, chargingStop: stop)
+        recommendation = ChargingRecommendation(decision: base.decision, arrivalBattery: base.arrivalBattery, reserveBattery: base.reserveBattery, incrementalTimeCostMinutes: base.incrementalTimeCostMinutes, destination: base.destination, explanation: base.explanation, confidence: base.confidence, routeData: base.routeData, usedLiveRouteData: base.usedLiveRouteData, chargingStop: stop, routeIssue: routeMessage)
         isPreparingRecommendation = false
     }
 }

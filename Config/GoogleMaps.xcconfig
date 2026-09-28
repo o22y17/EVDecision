@@ -1,4 +1,6 @@
 // Local API keys belong in GoogleMaps.local.xcconfig, which is intentionally ignored by Git.
 GOOGLE_MAPS_API_KEY =
 OPEN_CHARGE_MAP_API_KEY =
+SLASH = /
+EPDK_STATION_PROXY_URL = https:$(SLASH)$(SLASH)evdecision-station-proxy-jyuthkgwvq-ew.a.run.app/stations?brands=TESLA
 #include? "GoogleMaps.local.xcconfig"

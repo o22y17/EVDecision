@@ -1,3 +1,5 @@
 Config/GoogleMaps.local.xcconfig
 DerivedData/
 .DS_Store
+Backend/epdk-proxy/.venv/
+__pycache__/

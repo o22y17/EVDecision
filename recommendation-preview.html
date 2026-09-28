@@ -1,0 +1,28 @@
+<div id="ev-preview" aria-label="EVDecision öneri kartı taslak görünümü">
+<style>
+#ev-preview {color-scheme:light dark;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:light-dark(#202124,#f5f5f5)}
+#ev-preview .phone {max-width:390px;margin:auto;background:light-dark(#fff,#161616);padding:20px;border-radius:28px;border:1px solid light-dark(#ddd,#444)}
+#ev-preview header {text-align:center;font-weight:600;padding:12px} #ev-preview .sample {font-size:12px;text-align:center;color:light-dark(#666,#bbb);margin-bottom:18px}
+#ev-preview section {border:1px solid light-dark(#ddd,#444);border-radius:16px;padding:16px;margin-bottom:16px} #ev-preview h3 {font-size:18px;color:light-dark(#a35b00,#ffb35b);margin:0 0 12px}
+#ev-preview .row {display:flex;justify-content:space-between;gap:16px;margin:12px 0;flex-wrap:wrap} #ev-preview .row span {color:light-dark(#606060,#bbb)}
+#ev-preview p {font-size:14px;line-height:1.5} #ev-preview .notice {background:light-dark(#f3f4f3,#292b29);padding:12px;border-radius:10px}
+#ev-preview button {font:inherit;border:0;border-radius:12px;background:light-dark(#18813a,#50d36e);color:light-dark(#fff,#102313);padding:12px;width:100%} #ev-preview nav {display:flex;justify-content:space-around;padding:12px;font-size:14px} #ev-preview nav strong {color:light-dark(#18813a,#50d36e)}
+#ev-preview summary {padding:10px 0;font-size:14px} #ev-preview .value {font-weight:600}
+</style>
+<div class="phone">
+<header>Your trip</header><div class="sample">UI TASLAĞI · ÖRNEK VERİ · CANLI SONUÇ DEĞİL</div>
+<section>
+<h3>Recommended charging stop</h3><strong>Example charging station</strong>
+<div class="row"><span>Operator</span><b>Example network</b></div>
+<div class="row"><span>Maximum power</span><b>150 kW</b></div>
+<div class="notice"><strong>Live availability not verified</strong><p>Check the operator’s app before heading here.</p></div>
+<details open><summary>Station information</summary><div class="row"><span>Source</span><b>EPDK catalogue</b></div><div class="row"><span>Source update</span><b>Not provided</b></div><div class="row"><span>Downloaded</span><b>Today, 14:30 · example</b></div><p>The catalogue may be cached. Download time is not the station’s update time.</p></details>
+<div class="row"><span>Estimated charging time</span><b>35 min · example</b></div><div class="row"><span>Estimated arrival battery</span><b>25% · example</b></div><p>Based on the battery level you entered, not live vehicle data.</p>
+<button type="button" class="cursor-interaction">Navigate · preview</button><p class="feedback" aria-live="polite" hidden>Bu taslak navigasyonu başlatmaz.</p>
+</section><section><strong>Route</strong><div class="row"><span>Destination</span><b>Bodrum</b></div></section>
+<nav aria-label="App tabs"><strong>Daily</strong><span>Journey</span><span>Settings</span></nav>
+</div>
+<script>
+(()=>{const root=document.getElementById('ev-preview');const details=root.querySelector('details');const state={expanded:true};root.querySelector('button').addEventListener('click',()=>{root.querySelector('.feedback').hidden=false});if(globalThis.Tweak){const tweak=new Tweak({container:root,onChange:()=>{details.open=state.expanded}});tweak.addToggle(state,'expanded',{label:'Kaynak ayrıntılarını açık göster'});}})();
+</script>
+</div>

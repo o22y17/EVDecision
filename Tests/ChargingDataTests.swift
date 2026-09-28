@@ -3,6 +3,62 @@ import XCTest
 
 @MainActor
 final class ChargingDataTests: XCTestCase {
+    private func catalogueFixture(timestamp: Double, extra: String = "") -> Data {
+        """
+        {"fetchedAt":\(timestamp),"stations":[{"sarjIstasyonuNo":"1","sarjIstasyonuAdi":"Fixture","marka":"TEST","enlem":41,"boylam":29,"soketler":[]}]\(extra)}
+        """.data(using: .utf8)!
+    }
+
+    func testEPDKPreservesServerCatalogueAgeSeparatelyFromDownload() {
+        let now = Date(timeIntervalSince1970: 2_000_000)
+        let result = EPDKChargingProvider().decodeResult(data: catalogueFixture(timestamp: now.timeIntervalSince1970 - 43_200), downloadedAt: now)
+        XCTAssertNil(result.errorDescription)
+        XCTAssertEqual(result.stations.first?.catalogueFetchedAt, now.addingTimeInterval(-43_200))
+        XCTAssertEqual(result.stations.first?.retrievedAt, now)
+        XCTAssertNil(result.stations.first?.lastUpdated)
+    }
+
+    func testEPDKRejectsExpiredAndFutureCatalogue() {
+        let now = Date(timeIntervalSince1970: 2_000_000)
+        for offset in [-86_401.0, 301.0] {
+            let result = EPDKChargingProvider().decodeResult(data: catalogueFixture(timestamp: now.timeIntervalSince1970 + offset), downloadedAt: now)
+            XCTAssertTrue(result.stations.isEmpty)
+            XCTAssertNotNil(result.errorDescription)
+        }
+    }
+
+    func testEPDKPartialFailureKeepsUsefulStationsAndWarning() {
+        let now = Date(timeIntervalSince1970: 2_000_000)
+        let data = catalogueFixture(timestamp: now.timeIntervalSince1970, extra: #", "partialFailures":["ZES: timeout"]"#)
+        let result = EPDKChargingProvider().decodeResult(data: data, downloadedAt: now)
+        XCTAssertEqual(result.stations.count, 1)
+        XCTAssertTrue(result.errorDescription?.contains("incomplete") == true)
+    }
+
+    func testEPDKMalformedStationDoesNotDiscardValidStation() {
+        let data = #"{"fetchedAt":2000000,"stations":[{"sarjIstasyonuNo":"1","sarjIstasyonuAdi":"Valid","enlem":41,"boylam":29},{"enlem":"invalid"},{"sarjIstasyonuNo":"3","sarjIstasyonuAdi":"Outside","enlem":141,"boylam":29}]}"#.data(using: .utf8)!
+        let result = EPDKChargingProvider().decodeResult(data: data, downloadedAt: Date(timeIntervalSince1970: 2_000_000))
+        XCTAssertEqual(result.stations.map(\.name), ["Valid"])
+        XCTAssertNotNil(result.errorDescription)
+    }
+
+    func testEPDKDownloadDoesNotInventSourceFreshnessOrAvailability() {
+        let downloaded = Date()
+        let json = #"{"stations":[{"sarjIstasyonuNo":"1","sarjIstasyonuAdi":"Fixture","marka":"TEST","enlem":41,"boylam":29,"soketler":[{"soketNo":"1","soketTuru":"CCS","soketGucu":"150"}]}]}"#.data(using: .utf8)!
+        let station = EPDKChargingProvider().decode(data: json, fetchedAt: downloaded)[0]
+        XCTAssertNil(station.lastUpdated)
+        XCTAssertNil(station.units[0].lastUpdated)
+        XCTAssertEqual(station.retrievedAt, downloaded)
+        XCTAssertEqual(station.units[0].status, .unknown)
+        XCTAssertEqual(station.dataConfidence, .low)
+        XCTAssertEqual(ChargingDataService(providers: []).confidence(for: station), .low)
+        XCTAssertEqual(ChargingDataService(providers: []).merge([station])[0].retrievedAt, downloaded)
+        XCTAssertTrue(RoadTripPlanner().hasReliableCandidate(in: [station]))
+        var expired = station
+        expired.retrievedAt = downloaded.addingTimeInterval(-2 * 86_400)
+        XCTAssertFalse(RoadTripPlanner().hasReliableCandidate(in: [expired]))
+    }
+
     func testProviderDecodingPreservesUnknownStatusAndMissingPower() {
         let json = #"[{"ID":7,"AddressInfo":{"Title":"Test Hub","Latitude":41.0,"Longitude":29.0},"Connections":[{"ID":1,"ConnectionType":{"Title":"CCS Type 2"},"PowerKW":150},{"ID":2,"ConnectionType":{"Title":"CHAdeMO"}}]}]"#.data(using: .utf8)!
         let stations = OpenChargeMapProvider(apiKey: nil).decode(data: json)

@@ -2,7 +2,7 @@ import Foundation
 
 struct RoadTripPlanner {
     func bestStop(stations: [ChargingStation], route: RouteData, battery: Int, reserve: Int, preferredLimit: Int, origin: RoutePoint, destination: RoutePoint) -> ChargingStopPlan? {
-        let candidates = stations.compactMap { station -> ChargingStopPlan? in
+        let candidates = stations.filter(isReliableForRecommendation).compactMap { station -> ChargingStopPlan? in
             guard let unit = station.units.filter({ $0.maximumPowerKW ?? 0 >= 20 }).max(by: { ($0.maximumPowerKW ?? 0) < ($1.maximumPowerKW ?? 0) }) else { return nil }
             let offRoute = distanceToLine(point: RoutePoint(latitude: station.latitude, longitude: station.longitude), start: origin, end: destination)
             let progress = min(0.9, max(0.1, projection(point: RoutePoint(latitude: station.latitude, longitude: station.longitude), start: origin, end: destination)))
@@ -11,8 +11,13 @@ struct RoadTripPlanner {
             guard atStop > 3 else { return nil }
             let remainingConsumption = Int((Double(route.distanceKilometers) * (1 - progress) * 0.18).rounded(.up))
             let chargeTo = max(preferredLimit, min(100, remainingConsumption + reserve + 5))
+            guard chargeTo <= 100, chargeTo > atStop,
+                  chargeTo - remainingConsumption >= reserve else { return nil }
             let power = max(20, unit.maximumPowerKW ?? 20)
-            let chargingMinutes = max(8, Int((Double(max(0, chargeTo - atStop)) * 60 / (power / 70)).rounded()))
+            let energyNeededKWh = Double(max(0, chargeTo - atStop)) / 100 * 70
+            let taperFactor = chargeTo > 80 ? 0.55 : 0.72
+            let effectiveChargingPower = min(power, 150) * taperFactor
+            let chargingMinutes = max(8, Int((energyNeededKWh / effectiveChargingPower * 60).rounded(.up)))
             let extra = Int((offRoute * 4).rounded()) + 4
             return ChargingStopPlan(station: station, unit: unit, distanceOffRouteKilometers: offRoute, arrivalBattery: atStop, chargeFrom: atStop, chargeTo: chargeTo, chargingMinutes: chargingMinutes, arrivalBatteryAtDestination: max(0, chargeTo - remainingConsumption), extraTravelMinutes: extra + chargingMinutes)
         }
@@ -24,12 +29,28 @@ struct RoadTripPlanner {
         }.first
     }
 
+    func hasReliableCandidate(in stations: [ChargingStation]) -> Bool {
+        stations.contains(where: isReliableForRecommendation)
+    }
+
+    private func isReliableForRecommendation(_ station: ChargingStation) -> Bool {
+        guard let operatorName = station.operatorName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !operatorName.isEmpty,
+              !operatorName.localizedCaseInsensitiveContains("unknown") else { return false }
+        // Catalogue eligibility is not a claim of source freshness or live availability.
+        let timestamp = station.lastUpdated ?? (station.source == .epdkPublic ? station.catalogueFetchedAt ?? station.retrievedAt : nil)
+        guard let timestamp else { return false }
+        let age = Date().timeIntervalSince(timestamp)
+        return age >= 0 && age <= (station.lastUpdated == nil ? 86_400 : 90 * 86_400)
+    }
+
     private func projection(point: RoutePoint, start: RoutePoint, end: RoutePoint) -> Double {
         let dx = end.longitude - start.longitude; let dy = end.latitude - start.latitude
         let denominator = dx * dx + dy * dy
         guard denominator > 0 else { return 0 }
         return ((point.longitude - start.longitude) * dx + (point.latitude - start.latitude) * dy) / denominator
     }
+
     private func distanceToLine(point: RoutePoint, start: RoutePoint, end: RoutePoint) -> Double {
         let t = min(1, max(0, projection(point: point, start: start, end: end)))
         let closest = RoutePoint(latitude: start.latitude + (end.latitude - start.latitude) * t, longitude: start.longitude + (end.longitude - start.longitude) * t)

@@ -5,7 +5,7 @@ enum ChargingAvailability: String, Codable, Hashable {
 }
 
 enum ChargingDataSource: String, Codable, Hashable {
-    case operatorAPI, openChargeMap, googlePlaces, manualFallback
+    case epdkPublic, operatorAPI, openChargeMap, googlePlaces, manualFallback
 }
 
 enum ChargingDataConfidence: String, Codable, Hashable, Comparable {
@@ -35,6 +35,10 @@ struct ChargingStation: Identifiable, Codable, Hashable {
     let source: ChargingDataSource
     let dataConfidence: ChargingDataConfidence
     let units: [ChargingUnit]
+    /// Device download time, not source verification or live status.
+    var retrievedAt: Date? = nil
+    /// Time the server fetched the catalogue; never station/operator verification.
+    var catalogueFetchedAt: Date? = nil
 }
 
 struct ChargingProviderResult: Hashable {

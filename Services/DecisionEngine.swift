@@ -20,7 +20,7 @@ struct DecisionEngineV1: DecisionEngine {
         let confidence = confidence(for: predictedArrival, reserveBattery: trip.reserveBattery, usesLiveRouteData: trip.routeData != nil)
         let decision: ChargeDecision = predictedArrival <= trip.reserveBattery + confidenceBuffer(for: confidence) ? .chargeNow : .dontCharge
         let itc = incrementalTimeCost(for: trip)
-        return ChargingRecommendation(decision: decision, arrivalBattery: predictedArrival, reserveBattery: trip.reserveBattery, incrementalTimeCostMinutes: itc, destination: trip.destination, explanation: explanation(decision: decision, predictedArrival: predictedArrival, reserveBattery: trip.reserveBattery, preferredChargeLimit: trip.preferredChargeLimit, itc: itc, usingLiveRoute: trip.routeData != nil), confidence: confidence, routeData: trip.routeData, usedLiveRouteData: trip.routeData != nil, chargingStop: nil)
+        return ChargingRecommendation(decision: decision, arrivalBattery: predictedArrival, reserveBattery: trip.reserveBattery, incrementalTimeCostMinutes: itc, destination: trip.destination, explanation: explanation(decision: decision, predictedArrival: predictedArrival, reserveBattery: trip.reserveBattery, preferredChargeLimit: trip.preferredChargeLimit, itc: itc, usingLiveRoute: trip.routeData != nil), confidence: confidence, routeData: trip.routeData, usedLiveRouteData: trip.routeData != nil, chargingStop: nil, routeIssue: nil)
     }
 
     func predictedArrivalBattery(for trip: TripInput) -> Int {
