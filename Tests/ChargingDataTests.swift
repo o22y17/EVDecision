@@ -3,6 +3,49 @@ import XCTest
 
 @MainActor
 final class ChargingDataTests: XCTestCase {
+    func testBentRoadCorridorDoesNotUseStraightLineShortcut() {
+        let a = RoutePoint(latitude: 40, longitude: 29)
+        let bend = RoutePoint(latitude: 41, longitude: 29)
+        let b = RoutePoint(latitude: 41, longitude: 30)
+        let road = [a, bend, b]
+        XCTAssertEqual(RouteGeometry.position(of: bend, along: road)?.distance, 0)
+        XCTAssertGreaterThan(RouteGeometry.position(of: RoutePoint(latitude: 40.5, longitude: 29.5), along: road)!.distance, 30)
+        // Between sparse vertices still belongs to the corridor.
+        XCTAssertLessThan(RouteGeometry.position(of: RoutePoint(latitude: 40.5, longitude: 29.001), along: road)!.distance, 1)
+        let service = ChargingDataService(providers: [])
+        let nearBend = station(id: "bend", source: .operatorAPI, latitude: 41, longitude: 29, updated: Date(), units: [])
+        XCTAssertTrue(service.isInside(nearBend, corridor: RouteCorridor(origin: a, destination: b, polyline: road, radiusKilometers: 2)))
+    }
+
+    func testRouteDecoderPreservesGeometryAndLegs() {
+        let data = #"{"routes":[{"distanceMeters":3000,"duration":"120s","polyline":{"geoJsonLinestring":{"type":"LineString","coordinates":[[29,41],[30,42]]}},"legs":[{"distanceMeters":1000,"duration":"40s"},{"distanceMeters":2000,"duration":"80s"}]}]}"#.data(using: .utf8)!
+        guard case .success(let route) = GoogleRoutesService(apiKey: nil).decode(data) else { return XCTFail("Expected route") }
+        XCTAssertEqual(route.polyline?.first, RoutePoint(latitude: 41, longitude: 29))
+        XCTAssertEqual(route.legs.map(\.distanceKilometers), [1, 2])
+        XCTAssertEqual(route.durationMinutes, 2)
+    }
+
+    func testMalformedRouteDurationIsRejected() {
+        let data = #"{"routes":[{"distanceMeters":3000,"duration":"120x"}]}"#.data(using: .utf8)!
+        XCTAssertEqual(GoogleRoutesService(apiKey: nil).decode(data), .failure(.invalidResponse))
+    }
+
+    func testVerifiedDrivingLegsDetermineEnergyAndDetour() {
+        let now = Date()
+        let origin = RoutePoint(latitude: 41, longitude: 29), destination = RoutePoint(latitude: 41, longitude: 32)
+        let route = RouteData(distanceKilometers: 300, durationMinutes: 180, providerName: "Fixture", timestamp: now, polyline: [origin, destination])
+        let stop = station(id: "stop", source: .operatorAPI, latitude: 41, longitude: 30, updated: now, units: [unit(id: "dc", connector: "CCS", power: 150, updated: now)])
+        let via = RouteData(distanceKilometers: 330, durationMinutes: 230, providerName: "Fixture", timestamp: now, legs: [RouteLegData(distanceKilometers: 110, durationMinutes: 80), RouteLegData(distanceKilometers: 220, durationMinutes: 150)])
+        let result = RoadTripPlanner().bestStop(stations: [stop], route: route, battery: 62, reserve: 20, preferredLimit: 80, origin: origin, destination: destination, checkedRoutes: ["stop": via])
+        XCTAssertEqual(result?.arrivalBattery, 42)
+        XCTAssertEqual(result?.arrivalBatteryAtDestination, 40)
+        XCTAssertEqual(result?.distanceOffRouteKilometers, 30)
+        XCTAssertEqual(result?.extraTravelMinutes, 69)
+        XCTAssertNil(RoadTripPlanner().bestStop(stations: [stop], route: route, battery: 62, reserve: 20, preferredLimit: 80, origin: origin, destination: destination, checkedRoutes: [:]))
+        XCTAssertNil(RoadTripPlanner().bestStop(stations: [stop], route: route, battery: 30, reserve: 20, preferredLimit: 80, origin: origin, destination: destination, checkedRoutes: ["stop": via]))
+        XCTAssertNil(RoadTripPlanner().bestStop(stations: [stop], route: route, battery: 62, reserve: 20, preferredLimit: 50, origin: origin, destination: destination, checkedRoutes: ["stop": via]))
+    }
+
     private func catalogueFixture(timestamp: Double, extra: String = "") -> Data {
         """
         {"fetchedAt":\(timestamp),"stations":[{"sarjIstasyonuNo":"1","sarjIstasyonuAdi":"Fixture","marka":"TEST","enlem":41,"boylam":29,"soketler":[]}]\(extra)}

@@ -31,3 +31,11 @@ UI proposals use explicitly labelled sample data, never invented live status.
 - Explicit rejection of unsupported/excess brand queries; no silent truncation.
 - Backend has five isolated regression tests; iOS includes decoding/freshness/partial-result tests.
 - Rollout and full visual validation must be recorded separately from local passing tests.
+
+## Real road geometry checkpoint
+
+- Google Routes returns real GeoJSON road geometry; tested live for Istanbul–Bodrum, Istanbul–Ayvalık and a short city route.
+- Segment-based corridor filtering replaces gaps between sparse sampled vertices.
+- Up to three candidate stations are checked using routes with a stopover; two legs determine reachability and added distance/time.
+- Preferred charge limit and arrival reserve are respected; no verified road path means no selected station.
+- Remaining decision: support multiple planned charging stops internally while showing one next action, or expose a full itinerary. Do not silently expand the single-stop UI scope.

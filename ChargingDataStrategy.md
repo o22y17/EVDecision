@@ -28,7 +28,11 @@ Records with the same normalized operator and approximately the same coordinates
 
 ## Route corridor
 
-The service accepts origin, destination, optional polyline, and radius. A supplied polyline is used directly; otherwise, it samples nine straight-line points. This is replaceable with the true route polyline in a future route provider update.
+Google Routes requests a high-quality GeoJSON LineString. Corridor filtering measures distance to every segment, including between vertices. The generic service retains a straight-line fallback for diagnostics, but Daily stop verification requires the real road geometry and will not select a stop without it.
+
+Daily screens candidates using path progress and approximate energy. Up to three are checked with a Google route through the station; its two legs determine travel-to-stop, remaining travel, additional road distance and added driving time. The winner is the lowest estimated added time among this bounded shortlist, not a globally optimal stop. Traffic reflects query time, not a guaranteed forecast after charging. Arrival reserve is required at the stop and destination, and the preferred charge limit is never silently exceeded.
+
+Consumption and charging still use generic estimates (0.18 battery percentage points/km, 70 kWh, capped/tapered charging power). These are not Macan telemetry. Multiple charging stops remain unsupported and are identified as a possible reason a single-stop plan cannot be produced.
 
 ## Future operator integrations
 

@@ -147,12 +147,14 @@ struct HomeView: View {
         let base = engine.recommendation(for: TripInput(batteryPercentage: Int(batteryPercentage), destination: selectedPlace, reserveBattery: reserveBattery, preferredChargeLimit: preferredChargeLimit, routeData: routeData))
         var stop: ChargingStopPlan?
         if base.decision == .chargeNow, let routeData, let originPoint {
-            let corridor = RouteCorridor(origin: originPoint, destination: RoutePoint(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude), polyline: nil, radiusKilometers: 12)
+            let corridor = RouteCorridor(origin: originPoint, destination: RoutePoint(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude), polyline: routeData.polyline, radiusKilometers: 12)
             let snapshot = await chargingDataService.stations(in: corridor)
             routeMessage = snapshot.partialFailures.isEmpty ? routeMessage : snapshot.partialFailures.joined(separator: "\n")
-            stop = tripPlanner.bestStop(stations: snapshot.stations, route: routeData, battery: Int(batteryPercentage), reserve: reserveBattery, preferredLimit: preferredChargeLimit, origin: originPoint, destination: RoutePoint(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude))
+            let verified = await tripPlanner.verifiedStop(stations: snapshot.stations, route: routeData, battery: Int(batteryPercentage), reserve: reserveBattery, preferredLimit: preferredChargeLimit, origin: originPoint, destination: RoutePoint(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude), service: routeService)
+            stop = verified.stop
+            if let message = verified.message { routeMessage = [routeMessage, message].compactMap { $0 }.joined(separator: "\n") }
             if stop == nil {
-                routeMessage = snapshot.partialFailures.first ?? (tripPlanner.hasReliableCandidate(in: snapshot.stations) ? "No suitable fast charger was found close enough to this route." : "We found charging locations, but their operator or update information is too old to recommend safely.")
+                routeMessage = routeMessage ?? "No suitable charging stop was found in the available station data."
             }
         }
         recommendation = ChargingRecommendation(decision: base.decision, arrivalBattery: base.arrivalBattery, reserveBattery: base.reserveBattery, incrementalTimeCostMinutes: base.incrementalTimeCostMinutes, destination: base.destination, explanation: base.explanation, confidence: base.confidence, routeData: base.routeData, usedLiveRouteData: base.usedLiveRouteData, chargingStop: stop, routeIssue: routeMessage)

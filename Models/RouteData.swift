@@ -5,6 +5,13 @@ struct RouteData: Hashable {
     let durationMinutes: Int
     let providerName: String
     let timestamp: Date
+    var polyline: [RoutePoint]? = nil
+    var legs: [RouteLegData] = []
+}
+
+struct RouteLegData: Hashable {
+    let distanceKilometers: Double
+    let durationMinutes: Int
 }
 
 enum RouteLookupResult: Equatable {

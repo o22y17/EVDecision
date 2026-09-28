@@ -17,6 +17,32 @@ struct RouteCorridor: Hashable {
     }
 }
 
+/// Local metric projection onto every segment, not only sparse sample points.
+enum RouteGeometry {
+    static func position(of point: RoutePoint, along points: [RoutePoint]) -> (distance: Double, progress: Double)? {
+        guard points.count >= 2 else { return nil }
+        let lonScale = 111 * cos(point.latitude * .pi / 180)
+        let lengths = zip(points, points.dropFirst()).map { a, b in
+            hypot((b.latitude - a.latitude) * 111, (b.longitude - a.longitude) * lonScale)
+        }
+        let total = lengths.reduce(0, +)
+        guard total > 0 else { return nil }
+        var traversed = 0.0
+        var bestDistance = Double.infinity
+        var bestProgress = 0.0
+        for (index, length) in lengths.enumerated() {
+            let a = points[index], b = points[index + 1]
+            let ax = (a.longitude - point.longitude) * lonScale, ay = (a.latitude - point.latitude) * 111
+            let dx = (b.longitude - a.longitude) * lonScale, dy = (b.latitude - a.latitude) * 111
+            let t = length > 0 ? min(1, max(0, -(ax * dx + ay * dy) / (length * length))) : 0
+            let distance = hypot(ax + t * dx, ay + t * dy)
+            if distance < bestDistance { bestDistance = distance; bestProgress = (traversed + t * length) / total }
+            traversed += length
+        }
+        return (bestDistance, bestProgress)
+    }
+}
+
 @MainActor
 struct ChargingDataService {
     let providers: [any ChargingDataProvider]
@@ -88,7 +114,8 @@ struct ChargingDataService {
     }
 
     func isInside(_ station: ChargingStation, corridor: RouteCorridor) -> Bool {
-        corridor.samplePoints.contains { point in distanceKilometers(from: point, to: RoutePoint(latitude: station.latitude, longitude: station.longitude)) <= corridor.radiusKilometers }
+        guard let position = RouteGeometry.position(of: RoutePoint(latitude: station.latitude, longitude: station.longitude), along: corridor.samplePoints) else { return false }
+        return position.distance <= corridor.radiusKilometers
     }
 
     private func distanceKilometers(from: RoutePoint, to: RoutePoint) -> Double {
