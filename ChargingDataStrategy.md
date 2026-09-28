@@ -32,7 +32,13 @@ Google Routes requests a high-quality GeoJSON LineString. Corridor filtering mea
 
 Daily screens candidates using path progress and approximate energy. Up to three are checked with a Google route through the station; its two legs determine travel-to-stop, remaining travel, additional road distance and added driving time. The winner is the lowest estimated added time among this bounded shortlist, not a globally optimal stop. Traffic reflects query time, not a guaranteed forecast after charging. Arrival reserve is required at the stop and destination, and the preferred charge limit is never silently exceeded.
 
-Consumption and charging still use generic estimates (0.18 battery percentage points/km, 70 kWh, capped/tapered charging power). These are not Macan telemetry. Multiple charging stops remain unsupported and are identified as a possible reason a single-stop plan cannot be produced.
+Consumption and charging still use generic estimates (0.18 battery percentage points/km, 70 kWh, capped/tapered charging power). These are not Macan telemetry.
+
+## Complete itinerary / UI B
+
+Daily and Journey now build up to three candidate complete itineraries, with at most six charging stops, using increasing progress along the real route. Shortlisting is approximate, not globally optimal. Each candidate is then requested as a single driving route with all intermediate stations. Only a response with exactly one leg per stop plus the final destination leg may be presented. Every leg must preserve the arrival reserve; every charging stop uses the preferred charge limit. No reachable prefix is displayed when the destination cannot be reached.
+
+All stops appear in order, with the first highlighted and navigable. The summary shows final arrival battery and total added time. The user must return while parked and update battery after charging to recalculate; there is no automatic progress tracking or live vehicle connection. A debug-only sample launch argument exists for visual regression and disables navigation.
 
 ## Future operator integrations
 

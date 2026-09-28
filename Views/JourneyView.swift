@@ -14,6 +14,8 @@ struct JourneyView: View {
 
     private let engine = DecisionEngineV1()
     private let routeService = GoogleRoutesService()
+    private let chargingService = ChargingDataService(providers: [EPDKChargingProvider()])
+    private let planner = RoadTripPlanner()
 
     var body: some View {
         ScrollView {
@@ -87,7 +89,7 @@ struct JourneyView: View {
                 .tint(.green)
                 .disabled(isChecking)
 
-                Text("This version checks journey readiness. Route-aware charging-stop planning will be added separately.")
+                Text("The complete charging plan uses your entered battery level, not live vehicle data.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -113,11 +115,16 @@ struct JourneyView: View {
         }
 
         isChecking = true
+        let batteryPercentage = self.batteryPercentage
+        let reserveBattery = self.reserveBattery
+        let preferredChargeLimit = self.preferredChargeLimit
         routeMessage = nil
         var routeData: RouteData?
+        var originPoint: RoutePoint?
 
         do {
             let origin = try await locationService.currentCoordinate()
+            originPoint = RoutePoint(latitude: origin.latitude, longitude: origin.longitude)
             let destination = CLLocationCoordinate2D(
                 latitude: selectedPlace.latitude,
                 longitude: selectedPlace.longitude
@@ -132,7 +139,7 @@ struct JourneyView: View {
             routeMessage = "Current location unavailable. Using a conservative basic estimate. \(error.localizedDescription)"
         }
 
-        recommendation = engine.recommendation(
+        let base = engine.recommendation(
             for: TripInput(
                 batteryPercentage: Int(batteryPercentage),
                 destination: selectedPlace,
@@ -141,6 +148,16 @@ struct JourneyView: View {
                 routeData: routeData
             )
         )
+        var itinerary: ChargingItinerary?
+        if base.decision == .chargeNow, let routeData, let originPoint {
+            let destination = RoutePoint(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude)
+            let snapshot = await chargingService.stations(in: RouteCorridor(origin: originPoint, destination: destination, polyline: routeData.polyline, radiusKilometers: 12))
+            let result = await planner.verifiedItinerary(stations: snapshot.stations, route: routeData, battery: Int(batteryPercentage), reserve: reserveBattery, preferredLimit: preferredChargeLimit, origin: originPoint, destination: destination, service: routeService)
+            itinerary = result.itinerary
+            let messages = snapshot.partialFailures + [result.message].compactMap { $0 }
+            if !messages.isEmpty { routeMessage = messages.joined(separator: "\n") }
+        }
+        recommendation = ChargingRecommendation(decision: base.decision, arrivalBattery: base.arrivalBattery, reserveBattery: base.reserveBattery, incrementalTimeCostMinutes: base.incrementalTimeCostMinutes, destination: base.destination, explanation: base.explanation, confidence: base.confidence, routeData: base.routeData, usedLiveRouteData: base.usedLiveRouteData, chargingStop: nil, routeIssue: routeMessage, itinerary: itinerary)
         isChecking = false
     }
 }

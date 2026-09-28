@@ -39,3 +39,7 @@ UI proposals use explicitly labelled sample data, never invented live status.
 - Up to three candidate stations are checked using routes with a stopover; two legs determine reachability and added distance/time.
 - Preferred charge limit and arrival reserve are respected; no verified road path means no selected station.
 - Remaining decision: support multiple planned charging stops internally while showing one next action, or expose a full itinerary. Do not silently expand the single-stop UI scope.
+
+## Approved decision: B, full itinerary
+
+User selected all charging stops visible. Implemented complete-plan validation and ordered stop cards in Daily and Journey. The first stop is highlighted and navigable. Later stops stay visible; manual battery update and recalculation after charging is explicitly stated. Limits: three candidate plans, six stops, generic vehicle model, incomplete catalogue coverage, unknown live availability. No automatic arrival/charging detection.

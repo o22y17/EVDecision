@@ -130,6 +130,9 @@ struct HomeView: View {
             return
         }
         isPreparingRecommendation = true
+        let batteryPercentage = self.batteryPercentage
+        let reserveBattery = self.reserveBattery
+        let preferredChargeLimit = self.preferredChargeLimit
         routeMessage = nil
         var routeData: RouteData?
         var originPoint: RoutePoint?
@@ -145,19 +148,19 @@ struct HomeView: View {
             routeMessage = error.localizedDescription
         }
         let base = engine.recommendation(for: TripInput(batteryPercentage: Int(batteryPercentage), destination: selectedPlace, reserveBattery: reserveBattery, preferredChargeLimit: preferredChargeLimit, routeData: routeData))
-        var stop: ChargingStopPlan?
+        var itinerary: ChargingItinerary?
         if base.decision == .chargeNow, let routeData, let originPoint {
             let corridor = RouteCorridor(origin: originPoint, destination: RoutePoint(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude), polyline: routeData.polyline, radiusKilometers: 12)
             let snapshot = await chargingDataService.stations(in: corridor)
             routeMessage = snapshot.partialFailures.isEmpty ? routeMessage : snapshot.partialFailures.joined(separator: "\n")
-            let verified = await tripPlanner.verifiedStop(stations: snapshot.stations, route: routeData, battery: Int(batteryPercentage), reserve: reserveBattery, preferredLimit: preferredChargeLimit, origin: originPoint, destination: RoutePoint(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude), service: routeService)
-            stop = verified.stop
+            let verified = await tripPlanner.verifiedItinerary(stations: snapshot.stations, route: routeData, battery: Int(batteryPercentage), reserve: reserveBattery, preferredLimit: preferredChargeLimit, origin: originPoint, destination: RoutePoint(latitude: selectedPlace.latitude, longitude: selectedPlace.longitude), service: routeService)
+            itinerary = verified.itinerary
             if let message = verified.message { routeMessage = [routeMessage, message].compactMap { $0 }.joined(separator: "\n") }
-            if stop == nil {
+            if itinerary == nil {
                 routeMessage = routeMessage ?? "No suitable charging stop was found in the available station data."
             }
         }
-        recommendation = ChargingRecommendation(decision: base.decision, arrivalBattery: base.arrivalBattery, reserveBattery: base.reserveBattery, incrementalTimeCostMinutes: base.incrementalTimeCostMinutes, destination: base.destination, explanation: base.explanation, confidence: base.confidence, routeData: base.routeData, usedLiveRouteData: base.usedLiveRouteData, chargingStop: stop, routeIssue: routeMessage)
+        recommendation = ChargingRecommendation(decision: base.decision, arrivalBattery: base.arrivalBattery, reserveBattery: base.reserveBattery, incrementalTimeCostMinutes: base.incrementalTimeCostMinutes, destination: base.destination, explanation: base.explanation, confidence: base.confidence, routeData: base.routeData, usedLiveRouteData: base.usedLiveRouteData, chargingStop: nil, routeIssue: routeMessage, itinerary: itinerary)
         isPreparingRecommendation = false
     }
 }

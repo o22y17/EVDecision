@@ -3,6 +3,73 @@ import XCTest
 
 @MainActor
 final class ChargingDataTests: XCTestCase {
+    private func multiStopFixture() -> (RouteData, [ChargingStation], RoutePoint, RoutePoint) {
+        let origin = RoutePoint(latitude: 41, longitude: 29), destination = RoutePoint(latitude: 41, longitude: 36)
+        let route = RouteData(distanceKilometers: 700, durationMinutes: 420, providerName: "Fixture", timestamp: Date(), polyline: [origin, destination])
+        let stations = [31.0, 34.0].enumerated().map { index, lon in
+            station(id: "multi\(index)", source: .operatorAPI, latitude: 41, longitude: lon, updated: Date(), units: [unit(id: "dc\(index)", connector: "CCS", power: 150, updated: Date())])
+        }
+        return (route, stations, origin, destination)
+    }
+
+    func testMultiStopCandidateOrderAndChargeLimit() {
+        let (route, stations, _, _) = multiStopFixture()
+        let plans = RoadTripPlanner().candidateItineraries(stations: stations.reversed(), route: route, battery: 62, reserve: 20, preferredLimit: 80)
+        XCTAssertEqual(plans.first?.map(\.id), stations.map(\.id))
+        XCTAssertTrue(RoadTripPlanner().candidateItineraries(stations: stations, route: route, battery: 10, reserve: 20, preferredLimit: 80).isEmpty)
+        XCTAssertTrue(RoadTripPlanner().candidateItineraries(stations: stations, route: route, battery: 62, reserve: 20, preferredLimit: 80, maximumStops: 1).isEmpty)
+    }
+
+    func testWholeItineraryEnergyAndIncompleteLegRejection() {
+        let (baseline, stations, _, _) = multiStopFixture()
+        var route = baseline
+        route.legs = [200.0, 300.0, 200.0].map { RouteLegData(distanceKilometers: $0, durationMinutes: Int($0)) }
+        let planner = RoadTripPlanner()
+        let plan = planner.validatedItinerary(stations: stations, route: route, baseline: baseline, battery: 62, reserve: 20, preferredLimit: 80)
+        XCTAssertEqual(plan?.stops.count, 2)
+        XCTAssertEqual(plan?.stops.map(\.arrivalBattery), [26, 26])
+        XCTAssertEqual(plan?.stops.map(\.chargeTo), [80, 80])
+        XCTAssertEqual(plan?.arrivalBattery, 44)
+        route.legs.removeLast()
+        XCTAssertNil(planner.validatedItinerary(stations: stations, route: route, baseline: baseline, battery: 62, reserve: 20, preferredLimit: 80))
+        route.legs.append(RouteLegData(distanceKilometers: 400, durationMinutes: 200))
+        XCTAssertNil(planner.validatedItinerary(stations: stations, route: route, baseline: baseline, battery: 62, reserve: 20, preferredLimit: 80))
+    }
+
+    func testRouteFailureNeverReturnsPartialMultiStopPlan() async {
+        let (route, stations, origin, destination) = multiStopFixture()
+        let result = await RoadTripPlanner().verifiedItinerary(stations: stations, route: route, battery: 62, reserve: 20, preferredLimit: 80, origin: origin, destination: destination, service: FailedItineraryService())
+        XCTAssertNil(result.itinerary)
+        XCTAssertNotNil(result.message)
+    }
+
+    private struct FailedItineraryService: ItineraryRouteService {
+        func itineraryRoute(from origin: RoutePoint, to destination: RoutePoint, stops: [RoutePoint]) async -> RouteLookupResult { .failure(.timedOut) }
+    }
+
+    func testNoChargeItineraryHasNoStationsOrExtraTime() {
+        let now = Date()
+        let route = RouteData(distanceKilometers: 10, durationMinutes: 15, providerName: "Fixture", timestamp: now, legs: [RouteLegData(distanceKilometers: 10, durationMinutes: 15)])
+        let plan = RoadTripPlanner().validatedItinerary(stations: [], route: route, baseline: route, battery: 80, reserve: 20, preferredLimit: 80)
+        XCTAssertEqual(plan?.stops.count, 0)
+        XCTAssertEqual(plan?.arrivalBattery, 78)
+        XCTAssertEqual(plan?.extraTravelMinutes, 0)
+    }
+
+    func testVerifiedMultiStopItineraryReturnsAllStops() async {
+        let (baseline, stations, origin, destination) = multiStopFixture()
+        var route = baseline
+        route.legs = [200.0, 300.0, 200.0].map { RouteLegData(distanceKilometers: $0, durationMinutes: Int($0)) }
+        let result = await RoadTripPlanner().verifiedItinerary(stations: stations, route: baseline, battery: 62, reserve: 20, preferredLimit: 80, origin: origin, destination: destination, service: SuccessfulItineraryService(route: route))
+        XCTAssertEqual(result.itinerary?.stops.map(\.station.id), stations.map(\.id))
+        XCTAssertEqual(result.itinerary?.arrivalBattery, 44)
+    }
+
+    private struct SuccessfulItineraryService: ItineraryRouteService {
+        let route: RouteData
+        func itineraryRoute(from origin: RoutePoint, to destination: RoutePoint, stops: [RoutePoint]) async -> RouteLookupResult { .success(route) }
+    }
+
     func testBentRoadCorridorDoesNotUseStraightLineShortcut() {
         let a = RoutePoint(latitude: 40, longitude: 29)
         let bend = RoutePoint(latitude: 41, longitude: 29)

@@ -5,7 +5,11 @@ protocol RouteService {
     func route(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) async -> RouteLookupResult
 }
 
-struct GoogleRoutesService: RouteService {
+protocol ItineraryRouteService: Sendable {
+    func itineraryRoute(from origin: RoutePoint, to destination: RoutePoint, stops: [RoutePoint]) async -> RouteLookupResult
+}
+
+struct GoogleRoutesService: RouteService, ItineraryRouteService {
     private let session: URLSession
     private let apiKey: String?
 
@@ -19,6 +23,14 @@ struct GoogleRoutesService: RouteService {
     }
 
     func route(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, via stop: CLLocationCoordinate2D?) async -> RouteLookupResult {
+        await route(from: origin, to: destination, stops: stop.map { [$0] } ?? [])
+    }
+
+    func itineraryRoute(from origin: RoutePoint, to destination: RoutePoint, stops: [RoutePoint]) async -> RouteLookupResult {
+        await route(from: CLLocationCoordinate2D(latitude: origin.latitude, longitude: origin.longitude), to: CLLocationCoordinate2D(latitude: destination.latitude, longitude: destination.longitude), stops: stops.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) })
+    }
+
+    private func route(from origin: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, stops: [CLLocationCoordinate2D]) async -> RouteLookupResult {
         guard let apiKey,
               apiKey.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("AIza"),
               !apiKey.contains("$(") else { return .failure(.apiKeyUnavailable) }
@@ -41,7 +53,7 @@ struct GoogleRoutesService: RouteService {
             "polylineEncoding": "GEO_JSON_LINESTRING",
             "polylineQuality": "HIGH_QUALITY"
         ]
-        if let stop { body["intermediates"] = [waypoint(stop)] }
+        if !stops.isEmpty { body["intermediates"] = stops.map(waypoint) }
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         guard request.httpBody != nil else { return .failure(.invalidResponse) }
 
