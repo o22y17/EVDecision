@@ -21,8 +21,8 @@ struct JourneyView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Plan a longer trip")
-                        .font(.title3.weight(.semibold))
+                    Label("A little further, well planned", systemImage: "map.fill")
+                        .font(.title2.weight(.semibold)).fontDesign(.rounded).foregroundStyle(EVStyle.accent)
                     Text("Check whether your current battery can cover the journey safely.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -35,10 +35,10 @@ struct JourneyView: View {
                             Spacer()
                             Text("\(Int(batteryPercentage))%")
                                 .font(.headline.monospacedDigit())
-                                .foregroundStyle(.green)
+                                .foregroundStyle(EVStyle.accent)
                         }
                         Slider(value: $batteryPercentage, in: 0...100, step: 1)
-                            .tint(.green)
+                            .tint(EVStyle.accent).accessibilityLabel("Starting battery percentage")
                     }
                     .padding(.vertical, 2)
                 }
@@ -82,11 +82,11 @@ struct JourneyView: View {
                 }
 
                 Button { Task { await checkJourney() } } label: {
-                    Text(isChecking ? "Checking journey…" : "Check my journey")
-                        .frame(maxWidth: .infinity)
+                    Label(isChecking ? "Checking journey…" : "Check my journey", systemImage: "arrow.right.circle.fill")
+                        .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 8)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.green)
+                .buttonBorderShape(.roundedRectangle(radius: 16)).tint(EVStyle.accent)
                 .disabled(isChecking)
 
                 Text("The complete charging plan uses your entered battery level, not live vehicle data.")
@@ -95,6 +95,7 @@ struct JourneyView: View {
             }
             .padding()
         }
+        .background(EVStyle.canvas)
         .navigationTitle("Journey")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $recommendation) {

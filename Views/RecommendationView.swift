@@ -26,6 +26,8 @@ struct RecommendationView: View {
                 }
             }.padding()
         }
+        .background(EVStyle.canvas)
+        .tint(EVStyle.accent)
         .navigationTitle("Your trip")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -33,43 +35,55 @@ struct RecommendationView: View {
     private func fullPlan(_ plan: ChargingItinerary) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 10) {
-                Label("Your complete charging plan", systemImage: "map").font(.title3.weight(.semibold))
+                Label("Your journey, planned", systemImage: "map.fill").font(.subheadline.weight(.semibold)).foregroundStyle(EVStyle.accent)
+                Text(recommendation.destination?.name ?? "Your destination").font(.largeTitle.weight(.bold)).fontDesign(.rounded)
                 metric("Charging stops", "\(plan.stops.count)")
                 metric("Estimated arrival battery", "\(plan.arrivalBattery)%")
                 metric("Safety reserve", "\(recommendation.reserveBattery)%")
                 metric("Total extra time", formattedDuration(plan.extraTravelMinutes))
                 Text("Battery and charging times are estimates, not live vehicle readings. Stop availability is not verified.").font(.footnote).foregroundStyle(.secondary)
-            }.card()
+            }.card(accent: EVStyle.accent)
             ForEach(Array(plan.stops.enumerated()), id: \.element.station.id) { index, stop in
                 VStack(alignment: .leading, spacing: 10) {
-                    Label(index == 0 ? "Stop 1 · Next" : "Stop \(index + 1)", systemImage: "bolt.circle.fill")
-                        .font(.headline).foregroundStyle(index == 0 ? .green : .primary)
-                    Text(stop.station.name).font(.headline)
+                    HStack(spacing: 10) {
+                        Text("\(index + 1)").font(.headline.monospacedDigit())
+                            .foregroundStyle(EVStyle.accent).padding(10)
+                            .background(EVStyle.accent.opacity(0.12), in: Circle())
+                        Label(index == 0 ? "Your next charging stop" : "Later in your journey", systemImage: "bolt.fill")
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(EVStyle.accent)
+                    }
+                    Text(stop.station.name).font(.title3.weight(.semibold)).fontDesign(.rounded)
                     metric("Operator", stop.station.operatorName ?? "Not listed")
                     powerMetric(stop.unit.maximumPowerKW.map { String(format: "%.0f kW", $0) } ?? "Not listed")
                     metric(index == 0 ? "Drive to first stop" : "Drive from previous stop", formattedDuration(stop.incomingLeg.durationMinutes))
                     metric("Estimated arrival battery", "\(stop.arrivalBattery)%")
                     metric("Charge", "\(stop.arrivalBattery)% to \(stop.chargeTo)%")
                     metric("Estimated charging time", formattedDuration(stop.chargingMinutes))
-                    Text("Live availability not verified. Check the operator’s app.").font(.footnote).foregroundStyle(.secondary)
+                    Label("Availability unknown · Check the operator’s app", systemImage: "info.circle.fill")
+                        .font(.footnote).foregroundStyle(EVStyle.warning).padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(EVStyle.warning.opacity(0.09), in: RoundedRectangle(cornerRadius: 12))
                     DisclosureGroup("Station information") {
                         metric("Source", stop.station.source == .epdkPublic ? "EPDK catalogue" : stop.station.source.rawValue)
                         metric("Source update", stop.station.lastUpdated.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "Not provided")
                         if let date = stop.station.catalogueFetchedAt { metric("Catalogue retrieved", date.formatted(date: .abbreviated, time: .shortened)) }
                     }.font(.footnote)
                     if index == 0 { navigationMenu(latitude: stop.station.latitude, longitude: stop.station.longitude) }
-                }.card()
+                }.card(accent: index == 0 ? EVStyle.accent : nil)
             }
             Text("After charging, return to your trip while parked, enter your current battery and check the remaining journey again. Later stops may change.").font(.footnote).foregroundStyle(.secondary)
         }
     }
 
     private func navigationMenu(latitude: Double, longitude: Double) -> some View {
-        Menu("Navigate to next stop") {
+        Menu {
             Button("Google Maps") { navigate("comgooglemaps://?daddr=\(latitude),\(longitude)", fallback: "https://www.google.com/maps/dir/?api=1&destination=\(latitude),\(longitude)") }
             Button("Apple Maps") { navigate("https://maps.apple.com/?daddr=\(latitude),\(longitude)", fallback: "https://maps.apple.com/?daddr=\(latitude),\(longitude)") }
             Button("Yandex Maps") { navigate("yandexmaps://maps.yandex.com/?rtext=~\(latitude),\(longitude)&rtt=auto", fallback: "https://yandex.com/maps/?rtext=~\(latitude),\(longitude)&rtt=auto") }
-        }.buttonStyle(.borderedProminent).tint(.green).frame(maxWidth: .infinity)
+        } label: {
+            Label("Let’s go to this stop", systemImage: "location.fill")
+                .font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6)
+        }.buttonStyle(.borderedProminent).buttonBorderShape(.roundedRectangle(radius: 14)).tint(EVStyle.accent).frame(maxWidth: .infinity)
             .disabled(recommendation.itinerary?.route.providerName == "Sample")
     }
 
@@ -129,7 +143,7 @@ struct RecommendationView: View {
 
     private var routeSummary: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Route").font(.headline)
+            Label("Your route", systemImage: "point.topleft.down.to.point.bottomright.curvepath").font(.headline).foregroundStyle(EVStyle.accent)
             metric("Destination", recommendation.destination?.name ?? "Selected destination")
             if let stop = recommendation.chargingStop { metric("Charging stop", stop.station.name) }
             if let route = recommendation.itinerary?.route ?? recommendation.routeData {
@@ -142,12 +156,41 @@ struct RecommendationView: View {
     private func formattedDuration(_ totalMinutes: Int) -> String {
         let hours = totalMinutes / 60
         let minutes = totalMinutes % 60
-        return hours > 0 ? "\(hours) hr \(minutes) min" : "\(minutes) min"
+        return hours > 0 ? (minutes == 0 ? "\(hours) hr" : "\(hours) hr \(minutes) min") : "\(minutes) min"
     }
 
-    private func powerMetric(_ value: String) -> some View { HStack(alignment: .firstTextBaseline) { Label("Maximum power", systemImage: "bolt.fill").foregroundStyle(.secondary); Spacer(minLength: 12); Text(value).multilineTextAlignment(.trailing).font(.body.weight(.semibold)) } }
+    private func powerMetric(_ value: String) -> some View { metric("Maximum power", value) }
 
-    private func metric(_ label: String, _ value: String) -> some View { HStack(alignment: .firstTextBaseline) { Text(label).foregroundStyle(.secondary); Spacer(minLength: 12); Text(value).multilineTextAlignment(.trailing).font(.body.weight(.semibold)) } }
+    private func metric(_ label: String, _ value: String) -> some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                metricLabel(label).fixedSize(horizontal: true, vertical: false)
+                Spacer(minLength: 8)
+                Text(value).font(.body.weight(.semibold)).monospacedDigit().fixedSize(horizontal: true, vertical: false)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                metricLabel(label)
+                Text(value).font(.body.weight(.semibold)).monospacedDigit()
+            }.frame(maxWidth: .infinity, alignment: .leading)
+        }.padding(.vertical, 3).accessibilityElement(children: .combine)
+    }
+
+    private func metricLabel(_ label: String) -> some View {
+        let symbol: String = {
+            if label.localizedCaseInsensitiveContains("battery") || label == "Charge" { return "battery.75percent" }
+            if label.localizedCaseInsensitiveContains("reserve") { return "shield.lefthalf.filled" }
+            if label.localizedCaseInsensitiveContains("time") || label.localizedCaseInsensitiveContains("Drive") { return "clock" }
+            if label.localizedCaseInsensitiveContains("power") { return "bolt.fill" }
+            if label == "Operator" { return "building.2" }
+            if label.localizedCaseInsensitiveContains("stop") { return "ev.charger" }
+            if label.localizedCaseInsensitiveContains("distance") || label == "Destination" { return "mappin.and.ellipse" }
+            return "info.circle"
+        }()
+        return HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: symbol).foregroundStyle(EVStyle.accent).accessibilityHidden(true)
+            Text(label).foregroundStyle(.secondary)
+        }
+    }
     private func navigate(_ preferred: String, fallback: String) {
         guard let fallbackURL = URL(string: fallback) else { return }
         guard let url = URL(string: preferred) else { openURL(fallbackURL); return }
@@ -155,4 +198,12 @@ struct RecommendationView: View {
     }
 }
 
-private extension View { func card() -> some View { padding().background(.background, in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).stroke(.quaternary)) } }
+private extension View {
+    func card(accent: Color? = nil) -> some View {
+        padding(18).frame(maxWidth: .infinity, alignment: .leading)
+            .background((accent ?? .clear).opacity(0.055), in: RoundedRectangle(cornerRadius: 24))
+            .background(EVStyle.surface, in: RoundedRectangle(cornerRadius: 24))
+            .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder((accent ?? .secondary).opacity(accent == nil ? 0.10 : 0.24), lineWidth: 1))
+            .shadow(color: .black.opacity(0.035), radius: 12, x: 0, y: 4)
+    }
+}

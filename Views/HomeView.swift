@@ -26,19 +26,20 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Today’s charging decision").font(.title3.weight(.semibold))
+                    Label("Ready for the road?", systemImage: "sun.horizon.fill").font(.title2.weight(.semibold)).fontDesign(.rounded).foregroundStyle(EVStyle.accent)
                     Text("See whether you can skip a charging stop.").font(.subheadline).foregroundStyle(.secondary)
                 }
-                GroupBox("Your battery") {
+                GroupBox {
                     VStack(alignment: .leading, spacing: 10) {
-                        HStack { Text("Charge right now"); Spacer(); Text("\(Int(batteryPercentage))%").font(.headline.monospacedDigit()).foregroundStyle(.green) }
-                        Slider(value: $batteryPercentage, in: 0...100, step: 1).tint(.green)
+                        HStack { Text("Charge right now"); Spacer(); Text("\(Int(batteryPercentage))%").font(.title2.bold().monospacedDigit()).foregroundStyle(EVStyle.accent) }
+                        Slider(value: $batteryPercentage, in: 0...100, step: 1).tint(EVStyle.accent).accessibilityLabel("Current battery percentage")
                     }.padding(.vertical, 2)
                 }
-                GroupBox("Your trip") {
+                label: { Label("Your battery", systemImage: "battery.75percent") }
+                GroupBox {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 8) {
-                            Image(systemName: "magnifyingglass").foregroundStyle(.green)
+                            Image(systemName: "magnifyingglass").foregroundStyle(EVStyle.accent)
                             TextField("Where are you going?", text: $destinationQuery)
                                 .textInputAutocapitalization(.words)
                                 .autocorrectionDisabled()
@@ -68,20 +69,22 @@ struct HomeView: View {
                             }
                         }
                         if selectedPlace != nil { Label("Destination selected", systemImage: "checkmark.circle.fill").font(.footnote).foregroundStyle(.green) }
-                        Text("Keep at least \(reserveBattery)% when you arrive.").font(.footnote).foregroundStyle(.secondary)
+                        Label("Keep at least \(reserveBattery)% when you arrive.", systemImage: "shield.lefthalf.filled").font(.footnote).foregroundStyle(.secondary)
                     }.padding(.vertical, 2)
                 }
+                label: { Label("Your trip", systemImage: "mappin.and.ellipse") }
                 if isPreparingRecommendation || locationService.isLoading {
                     HStack(spacing: 8) { ProgressView(); Text("Checking your route…").font(.footnote).foregroundStyle(.secondary) }
                 }
                 if let routeMessage { Text(routeMessage).font(.footnote).foregroundStyle(.secondary) }
                 Button { Task { await prepareRecommendation() } } label: {
-                    Text(isPreparingRecommendation ? "Checking route…" : "Check my trip").frame(maxWidth: .infinity)
+                    Label(isPreparingRecommendation ? "Checking route…" : "Check my trip", systemImage: "arrow.right.circle.fill").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 8)
                 }
-                .buttonStyle(.borderedProminent).tint(.green)
+                .buttonStyle(.borderedProminent).buttonBorderShape(.roundedRectangle(radius: 16)).tint(EVStyle.accent)
                 .disabled(isPreparingRecommendation)
             }.padding()
         }
+        .background(EVStyle.canvas)
         .navigationTitle("EV Decision").navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $recommendation) { RecommendationView(recommendation: $0) }
         .onDisappear { destinationSearchTask?.cancel() }
